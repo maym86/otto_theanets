@@ -1,11 +1,10 @@
 import climate
 import theanets
-import csv
 from sklearn import cross_validation
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
-from multiclass_log_loss import *
+from ml_metrics import *
 # try scaling http://sebastianraschka.com/Articles/2014_about_feature_scaling.html
 
 
@@ -77,7 +76,7 @@ def main():
     training_data, validation_data, test_data, std_scale = load_training_data()
     climate.enable_default_logging()
 
-    trainers = ['sgd', 'nag', 'rprop', 'rmsprop', 'adadelta', 'esgd', 'hf', 'sample', 'layerwise', 'pretrain']
+    trainers = ['nag', 'sgd', 'rprop', 'rmsprop', 'adadelta', 'esgd', 'hf', 'sample', 'layerwise', 'pretrain']
     # layers = [(93, 256, 128, 9), (93, 128, 64, 32, 9)]
     layers = [(93, 256, 128, 9)]
     for l in layers:
@@ -93,7 +92,7 @@ def main():
                                      validation_data,
                                      algorithm=t,
                                      hidden_l1=0.001,
-                                     train_batches=300
+                                     train_batches=300,
                                      )
 
 
@@ -101,11 +100,9 @@ def main():
             test_results = exp.network.predict(test_data[0])
             loss = multiclass_log_loss(test_data[1], test_results)
 
-            print 'validation acc:', train_result[1]['loss']  #validation accuracy
-            print 'test loss:', loss
+            print 'Test multiclass log loss:', loss
 
-
-            out_file = 'log_loss/' + str(loss) + t + str(l)
+            out_file = 'results/' + str(loss) + t + str(l)
             exp.save(out_file + '.pkl')
 
 
