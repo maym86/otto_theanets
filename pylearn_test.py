@@ -1,5 +1,14 @@
-import climate
-import theanets
+__author__ = 'Michael May'
+
+
+import theano
+from pylearn2.models import mlp
+from pylearn2.training_algorithms import sgd
+from pylearn2.termination_criteria import EpochCounter
+from pylearn2.datasets.dense_design_matrix import DenseDesignMatrix
+import numpy as np
+
+
 from sklearn import cross_validation
 import pandas as pd
 import numpy as np
@@ -74,7 +83,7 @@ def load_training_data():
 
 def main():
     training_data, validation_data, test_data, std_scale = load_training_data()
-    climate.enable_default_logging()
+    kaggle_test_features = load_test_data(std_scale)
 
     trainers = ['nag', 'sgd', 'rprop', 'rmsprop', 'adadelta', 'esgd', 'hf', 'sample', 'layerwise', 'pretrain']
     layers = [(93, 256, 128, 9), (93, 300, 200, 9), (93, 128, 64, 32, 9)]
@@ -82,21 +91,26 @@ def main():
     for l in layers:
         for t in trainers:
 
-            exp = theanets.Experiment(
-            theanets.Classifier,
-            layers=l
-            )
-
-            exp.train(training_data,
-                      validation_data,
-                      algorithm=t,
-                      hidden_l1=0.001,
-                      weight_inverse=0,
-                      train_batches=300)
+            hidden_layer = mlp.Sigmoid(layer_name='hidden', dim=2, irange=.1, init_bias=1.)
+            # create Softmax output layer
+            output_layer = mlp.Softmax(2, 'output', irange=.1)
+            # create Stochastic Gradient Descent trainer that runs for 400 epochs
+            trainer = sgd.SGD(learning_rate=.05, batch_size=10, termination_criterion=EpochCounter(400))
+            layers = [hidden_layer, output_layer]
+            # create neural net that takes two inputs
+            ann = mlp.MLP(layers, nvis=2)
+            trainer.setup(ann, training_data)
+            # train neural net until the termination criterion is true
+            while True:
+                trainer.train(dataset=training_data)
+                ann.monitor.report_epoch()
+                ann.monitor()
+                if not trainer.continue_learning(ann):
+                    break
 
 
             #get an prediction of the accuracy from the test_data
-            test_results = exp.network.predict(test_data[0])
+            test_results = ann.fprop(theano.shared(test_data[0], name='inputs')).eval()
             loss = multiclass_log_loss(test_data[1], test_results)
 
             print 'Test multiclass log loss:', loss
@@ -106,8 +120,8 @@ def main():
 
 
             #save the kaggle results
-            kaggle_test_features = load_test_data(std_scale)
-            results = exp.network.predict(kaggle_test_features)
+
+            results = ann.fprop(theano.shared(kaggle_test_features).eval())
             save_results(out_file + '.csv', kaggle_test_features, results)
 
 
