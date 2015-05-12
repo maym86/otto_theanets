@@ -51,11 +51,11 @@ def load_training_data():
     print np.unique(classes)
 
     #split train/validate
-    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes, test_size=0.3,
+    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes, test_size=0.2,
                                                                                        random_state=0)
 
     feat_train, feat_val, class_train, class_val = cross_validation.train_test_split(feat_train, class_train,
-                                                                                     test_size=0.3,
+                                                                                     test_size=0.2,
                                                                                      random_state=0)
 
     #scale the features

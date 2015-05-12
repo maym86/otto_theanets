@@ -1,12 +1,14 @@
 __author__ = 'Michael May'
 
-
 import theano
 from pylearn2.models import mlp
 from pylearn2.training_algorithms import sgd
-from pylearn2.termination_criteria import EpochCounter
+from pylearn2.utils import serial
 from pylearn2.datasets.dense_design_matrix import DenseDesignMatrix
-
+from pylearn2.train import Train
+from pylearn2.termination_criteria import MonitorBased
+from pylearn2.train_extensions import best_params
+from pylearn2.training_algorithms import learning_rule
 from sklearn import cross_validation
 import pandas as pd
 from sklearn import preprocessing
@@ -46,7 +48,7 @@ def save_results(file, test_features, results):
     res = pd.DataFrame.from_records(results, index=index, columns=columns)
     res.index.name = 'id'
 
-    #save results
+    # save results
     res.to_csv(file)
 
 
@@ -68,48 +70,80 @@ def load_training_data():
 
     print np.unique(classes)
 
-    #split train/validate
-    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes, test_size=0.3,
+    # split train/validate
+    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes, test_size=0.2,
                                                                                        random_state=0)
 
-    #scale the features
+    feat_train, feat_val, class_train, class_val = cross_validation.train_test_split(feat_train, class_train,
+                                                                                     test_size=0.2, random_state=0)
+
+    # scale the features
     std_scale = preprocessing.StandardScaler().fit(feat_train)
     feat_train = std_scale.transform(feat_train)
+    feat_val = std_scale.transform(feat_val)
     feat_test = std_scale.transform(feat_test)
 
     training_data = Dataset(feat_train, class_train)
+    validation_data = Dataset(feat_val, class_val)
     test_data = [feat_test, class_test]
 
-    return training_data, test_data, std_scale
+    return training_data, validation_data, test_data, std_scale
 
 
+# https://github.com/kastnerkyle/pylearn2-practice/blob/master/cifar10_train.py
 def main():
-    training_data, test_data, std_scale = load_training_data()
+    training_data, validation_data, test_data, std_scale = load_training_data()
     kaggle_test_features = load_test_data(std_scale)
 
 
-    #pylearn2 ML
-    hidden_layer = mlp.Sigmoid(layer_name='hidden', dim=93, irange=.1, init_bias=1.)
+    ###############
+    # pylearn2 ML
+    hl1 = mlp.Sigmoid(layer_name='hl1', dim=200, irange=.1, init_bias=1.)
+    hl2 = mlp.Sigmoid(layer_name='hl2', dim=100, irange=.1, init_bias=1.)
+
     # create Softmax output layer
     output_layer = mlp.Softmax(9, 'output', irange=.1)
     # create Stochastic Gradient Descent trainer that runs for 400 epochs
-    trainer = sgd.SGD(learning_rate=.05, batch_size=10, termination_criterion=EpochCounter(400))
-    layers = [hidden_layer, output_layer]
-    # create neural net that takes two inputs
-    ann = mlp.MLP(layers, nvis=93)
-    trainer.setup(ann, training_data)
-    # train neural net until the termination criterion is true
-    count = 0
-    while True:
-        trainer.train(dataset=training_data)
-        ann.monitor.report_epoch()
-        ann.monitor()
-        count += 1
-        if not trainer.continue_learning(ann):
-            break
+    trainer = sgd.SGD(learning_rate=.05,
+                      batch_size=300,
+                      learning_rule=learning_rule.Momentum(.5),
+                  termination_criterion=MonitorBased(
+                      channel_name='valid_objective',
+                      prop_decrease=0.,
+                      N=10),
+                      monitoring_dataset={
+                          'valid': validation_data,
+                          'train': training_data})
 
-    #get an prediction of the accuracy from the test_data
-    test_results = ann.fprop(theano.shared(test_data[0], name='test_data')).eval()
+    layers = [hl1, hl2, output_layer]
+    # create neural net
+    model = mlp.MLP(layers, nvis=93)
+
+    watcher = best_params.MonitorBasedSaveBest( channel_name='valid_objective',
+        save_path='pylearn2_results/pylearn2_test.pkl')
+
+    velocity = learning_rule.MomentumAdjustor(final_momentum=.6,
+                                              start=1,
+                                              saturate=250)
+    decay = sgd.LinearDecayOverEpoch(start=1,
+                                 saturate=250,
+                                 decay_factor=.01)
+    ######################
+
+
+    experiment = Train(dataset=training_data,
+                       model=model,
+                       algorithm=trainer,
+                       extensions=[watcher, velocity, decay])
+
+    experiment.main_loop()
+
+
+    #load best model and test
+    ################
+    model = serial.load('pylearn2_results/pylearn2_test.pkl')
+    # get an prediction of the accuracy from the test_data
+    test_results = model.fprop(theano.shared(test_data[0], name='test_data')).eval()
 
     print test_results.shape
     loss = multiclass_log_loss(test_data[1], test_results)
@@ -122,9 +156,8 @@ def main():
 
     #save the kaggle results
 
-    results = ann.fprop(theano.shared(kaggle_test_features, name='kaggle_test_data')).eval()
+    results = model.fprop(theano.shared(kaggle_test_features, name='kaggle_test_data')).eval()
     save_results(out_file + '.csv', kaggle_test_features, results)
-
 
 if __name__ == "__main__":
     main()
