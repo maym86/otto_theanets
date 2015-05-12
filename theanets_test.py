@@ -77,7 +77,7 @@ def main():
     climate.enable_default_logging()
 
     trainers = ['nag', 'sgd', 'rprop', 'rmsprop', 'adadelta', 'esgd', 'hf', 'sample', 'layerwise', 'pretrain']
-    layers = [(93, 256, 128, 9), (93, 300, 200, 9), (93, 128, 64, 32, 9)]
+    layers = [(93, 256, 128, 256, 9), (93, 256, 128, 256, 128, 9), (93, 256, 128, 9)]
 
     for l in layers:
         for t in trainers:
@@ -92,6 +92,7 @@ def main():
                       algorithm=t,
                       hidden_l1=0.001,
                       weight_inverse=0,
+                      patience= 10,
                       train_batches=300)
 
 
