@@ -51,11 +51,11 @@ def load_training_data():
     print np.unique(classes)
 
     #split train/validate
-    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes, test_size=0.2,
+    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes, test_size=0.3,
                                                                                        random_state=0)
 
     feat_train, feat_val, class_train, class_val = cross_validation.train_test_split(feat_train, class_train,
-                                                                                     test_size=0.2,
+                                                                                     test_size=0.3,
                                                                                      random_state=0)
 
     #scale the features
@@ -77,22 +77,23 @@ def main():
     climate.enable_default_logging()
 
     trainers = ['nag', 'sgd', 'rprop', 'rmsprop', 'adadelta', 'esgd', 'hf', 'sample', 'layerwise', 'pretrain']
-    layers = [(93, 256, 128, 256, 9), (93, 256, 128, 256, 128, 9), (93, 256, 128, 9)]
+    layers = [ (93, (256, 'relu'), (128, 'softplus'), 9), (93, (256, 'rnn'), (128, 'softplus'), 9),
+                (93, (256, 'relu'), 128, 9), (93, (256, 'tanh'), 128, 9)]
 
     for l in layers:
         for t in trainers:
 
             exp = theanets.Experiment(
-            theanets.Classifier,
-            layers=l
+                theanets.Classifier,
+                layers=l
             )
 
             exp.train(training_data,
                       validation_data,
                       algorithm=t,
-                      hidden_l1=0.001,
-                      weight_inverse=0,
-                      patience= 10,
+                      input_dropout = 0.1,
+                      hidden_dropout = 0.1,
+                      patience= 15,
                       train_batches=300)
 
 
