@@ -46,21 +46,22 @@ def load_training_data():
     raw_training_data['target'] = raw_training_data['target'].astype('int32')
 
     raw_training_data = raw_training_data.iloc[np.random.permutation(len(raw_training_data))] #shuffle data
-    print raw_training_data
     # Get the features and the classes
-    features = np.log(raw_training_data.iloc[:, 1:94] + 1).values#apply log function
+    features = np.log(raw_training_data.iloc[:, 1:94] + 1).values # apply log function
 
     classes = raw_training_data['target'].values
 
     print np.unique(classes)
 
     #split train/validate
-    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes, test_size=0.2,
+    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes,
+                                                                                       test_size=0.2,
                                                                                        random_state=1232)
 
     feat_train, feat_val, class_train, class_val = cross_validation.train_test_split(feat_train, class_train,
                                                                                      test_size=0.2,
                                                                                      random_state=1232)
+
 
     #scale the features
     std_scale = preprocessing.StandardScaler().fit(feat_train)
@@ -68,9 +69,21 @@ def load_training_data():
     feat_val = std_scale.transform(feat_val)
     feat_test = std_scale.transform(feat_test)
 
+    #class weights
+    weights = np.bincount(class_train) / float(len(class_train))
+    weights = weights.astype('float32')
+
+    train_weights = []
+    val_weights = []
+    for i in class_train:
+        train_weights.append(weights[i])
+
+    for i in list(class_val):
+        val_weights.append(weights[i])
+
     #convert to np array for theanets
-    training_data = [feat_train, class_train]
-    validation_data = [feat_val, class_val]
+    training_data = [feat_train, class_train, np.array(train_weights)]
+    validation_data = [feat_val, class_val, np.array(val_weights)]
     test_data = [feat_test, class_test]
 
     return training_data, validation_data, test_data, std_scale
@@ -80,38 +93,37 @@ def main():
     training_data, validation_data, test_data, std_scale = load_training_data()
     climate.enable_default_logging()
 
-    trainers = ['nag', 'sgd', 'rprop', 'rmsprop', 'adadelta', 'esgd', 'hf', 'sample', 'layerwise', 'pretrain']
-    layers = [(93, 256, 128, 9)]
-
-    for l in layers:
-        for t in trainers:
-
-            exp = theanets.Experiment(
-                theanets.Classifier,
-                layers=l
-            )
-
-            exp.train(training_data,
-                      validation_data,
-                      algorithm=t,
-                      patience= 50,
-                      )
+    t = 'nag' #, 'rmsprop','pretrain', 'rprop', 'sgd',  'adadelta', 'esgd', 'hf', 'sample', 'layerwise'
+    l = (93, 512, 9)
 
 
-            #get an prediction of the accuracy from the test_data
-            test_results = exp.network.predict(test_data[0])
-            loss = multiclass_log_loss(test_data[1], test_results)
+    exp = theanets.Experiment(
+        theanets.Classifier,
+        layers=l,
+        weighted=True,
+    )
 
-            print 'Test multiclass log loss:', loss
+    exp.train(training_data,
+              validation_data,
+              algorithm=t,
+              patience= 50,
+              )
 
-            out_file = 'results2/' + str(loss) + t + str(l)
-            exp.save(out_file + '.pkl')
+
+    #get an prediction of the accuracy from the test_data
+    test_results = exp.network.predict(test_data[0])
+    loss = multiclass_log_loss(test_data[1], test_results)
+
+    print 'Test multiclass log loss:', loss
+
+    out_file = 'results/' + str(loss) + t + str(l)
+    exp.save(out_file + '.pkl')
 
 
-            #save the kaggle results
-            kaggle_test_features = load_test_data(std_scale)
-            results = exp.network.predict(kaggle_test_features)
-            save_results(out_file + '.csv', kaggle_test_features, results)
+    #save the kaggle results
+    kaggle_test_features = load_test_data(std_scale)
+    results = exp.network.predict(kaggle_test_features)
+    save_results(out_file + '.csv', kaggle_test_features, results)
 
 
 if __name__ == "__main__":
