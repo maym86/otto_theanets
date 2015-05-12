@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from sklearn import preprocessing
 from ml_metrics import *
+import math
 # try scaling http://sebastianraschka.com/Articles/2014_about_feature_scaling.html
 
 
@@ -13,7 +14,7 @@ def load_test_data(std_scale):
     raw_testing_data = raw_testing_data.astype('float32')  # convert types to float32
 
     # Get the features and the classes
-    test_features = raw_testing_data.iloc[:, 1:94].values  # get the feature vectors
+    test_features = np.log(raw_testing_data.iloc[:, 1:94] + 1).values#apply log functio
 
     test_features = std_scale.transform(test_features)  # scale the features
     return test_features
@@ -45,18 +46,19 @@ def load_training_data():
     raw_training_data['target'] = raw_training_data['target'].astype('int32')
 
     # Get the features and the classes
-    features = raw_training_data.iloc[:, 1:94].values
+    features = np.log(raw_training_data.iloc[:, 1:94] + 1).values#apply log function
+
     classes = raw_training_data['target'].values
 
     print np.unique(classes)
 
     #split train/validate
-    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes, test_size=0.3,
-                                                                                       random_state=0)
+    feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes, test_size=0.2,
+                                                                                       random_state=1232)
 
     feat_train, feat_val, class_train, class_val = cross_validation.train_test_split(feat_train, class_train,
-                                                                                     test_size=0.3,
-                                                                                     random_state=0)
+                                                                                     test_size=0.2,
+                                                                                     random_state=1232)
 
     #scale the features
     std_scale = preprocessing.StandardScaler().fit(feat_train)
@@ -77,8 +79,7 @@ def main():
     climate.enable_default_logging()
 
     trainers = ['nag', 'sgd', 'rprop', 'rmsprop', 'adadelta', 'esgd', 'hf', 'sample', 'layerwise', 'pretrain']
-    layers = [ (93, (256, 'relu'), (128, 'softplus'), 9), (93, (256, 'rnn'), (128, 'softplus'), 9),
-                (93, (256, 'relu'), 128, 9), (93, (256, 'tanh'), 128, 9)]
+    layers = [(93, (1024, 'relu'), 9)]
 
     for l in layers:
         for t in trainers:
@@ -91,10 +92,11 @@ def main():
             exp.train(training_data,
                       validation_data,
                       algorithm=t,
-                      input_dropout = 0.1,
-                      hidden_dropout = 0.1,
+                      input_dropouts = 0.05,
+                      hidden_dropouts = 0.1,
                       patience= 15,
-                      train_batches=300)
+                      output_activation='softmax',
+                      batch_size=300)
 
 
             #get an prediction of the accuracy from the test_data
@@ -103,7 +105,7 @@ def main():
 
             print 'Test multiclass log loss:', loss
 
-            out_file = 'results/' + str(loss) + t + str(l)
+            out_file = 'results2/' + str(loss) + t + str(l)
             exp.save(out_file + '.pkl')
 
 
