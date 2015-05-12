@@ -45,6 +45,8 @@ def load_training_data():
     raw_training_data = raw_training_data.astype('float32')
     raw_training_data['target'] = raw_training_data['target'].astype('int32')
 
+    raw_training_data = raw_training_data.iloc[np.random.permutation(len(raw_training_data))] #shuffle data
+    print raw_training_data
     # Get the features and the classes
     features = np.log(raw_training_data.iloc[:, 1:94] + 1).values#apply log function
 
@@ -79,7 +81,7 @@ def main():
     climate.enable_default_logging()
 
     trainers = ['nag', 'sgd', 'rprop', 'rmsprop', 'adadelta', 'esgd', 'hf', 'sample', 'layerwise', 'pretrain']
-    layers = [(93, (1024, 'relu'), 9)]
+    layers = [(93, 256, 128, 9)]
 
     for l in layers:
         for t in trainers:
@@ -92,11 +94,11 @@ def main():
             exp.train(training_data,
                       validation_data,
                       algorithm=t,
-                      input_dropouts = 0.05,
-                      hidden_dropouts = 0.1,
-                      patience= 15,
+                      #input_dropouts = 0.05,
+                      #hidden_dropouts = 0.1,
+                      patience= 50,
                       output_activation='softmax',
-                      batch_size=300)
+                      train_batches=300)
 
 
             #get an prediction of the accuracy from the test_data
