@@ -94,11 +94,8 @@ def main():
             exp.train(training_data,
                       validation_data,
                       algorithm=t,
-                      #input_dropouts = 0.05,
-                      #hidden_dropouts = 0.1,
                       patience= 50,
-                      output_activation='softmax',
-                      train_batches=300)
+                      )
 
 
             #get an prediction of the accuracy from the test_data
