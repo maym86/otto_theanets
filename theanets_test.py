@@ -84,8 +84,8 @@ def load_training_data():
         val_weights.append(weights[i])
 
     #convert to np array for theanets
-    training_data = [feat_train, class_train] #, np.array(train_weights)]
-    validation_data = [feat_val, class_val] #, np.array(val_weights)]
+    training_data = [feat_train, class_train, np.array(train_weights)]
+    validation_data = [feat_val, class_val, np.array(val_weights)]
     test_data = [feat_test, class_test]
 
     return training_data, validation_data, test_data, std_scale
@@ -95,7 +95,7 @@ def main():
     training_data, validation_data, test_data, std_scale = load_training_data()
     climate.enable_default_logging()
 
-    targets = ['nag','hf','adadelta','esgd','layerwise','rmsprop','rprop','sgd','sample']
+    targets = ['nag'] #,'hf','adadelta','esgd','layerwise','rmsprop','rprop','sgd','sample']
     layers = [(93,  dict(size=512, activation='relu'),
                     dict(size=512, activation='relu'),
                     dict(size=512, activation='relu'),
@@ -106,15 +106,35 @@ def main():
             exp = theanets.Experiment(
                 theanets.Classifier,
                 layers=l,
-                weighted=False,
-                batch_size=128,
+                weighted=True,
             )
+
+
 
             exp.train(training_data,
                         validation_data,
                         output_activation = 'softmax',
                         optimize=t,
-                        patience=10
+                        patience=10,
+                        learning_rate = 0.01
+
+                      )
+
+            exp.train(training_data,
+                        validation_data,
+                        output_activation = 'softmax',
+                        optimize=t,
+                        patience=10,
+                        learning_rate = 0.001
+
+                      )
+            exp.train(training_data,
+                        validation_data,
+                        output_activation = 'softmax',
+                        optimize=t,
+                        patience=10,
+                        learning_rate = 0.0001
+
                       )
 
             #get an prediction of the accuracy from the test_data
