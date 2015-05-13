@@ -84,8 +84,8 @@ def load_training_data():
         val_weights.append(weights[i])
 
     #convert to np array for theanets
-    training_data = [feat_train, class_train, np.array(train_weights)]
-    validation_data = [feat_val, class_val, np.array(val_weights)]
+    training_data = [feat_train, class_train] #, np.array(train_weights)]
+    validation_data = [feat_val, class_val] #, np.array(val_weights)]
     test_data = [feat_test, class_test]
 
     return training_data, validation_data, test_data, std_scale
@@ -96,9 +96,9 @@ def main():
     climate.enable_default_logging()
 
     targets = ['nag','hf','adadelta','esgd','layerwise','rmsprop','rprop','sgd','sample']
-    layers = [(93,  dict(size=512, sparsity=0.5, activation='relu'),
-                    dict(size=512, sparsity=0.5, activation='relu'),
-                    dict(size=512, sparsity=0.5, activation='relu'),
+    layers = [(93,  dict(size=512, activation='relu'),
+                    dict(size=512, activation='relu'),
+                    dict(size=512, activation='relu'),
                     9)]
 
     for l in layers:
@@ -106,14 +106,14 @@ def main():
             exp = theanets.Experiment(
                 theanets.Classifier,
                 layers=l,
-                weighted=True
+                weighted=False,
+                batch_size=128,
             )
 
             exp.train(training_data,
                         validation_data,
                         output_activation = 'softmax',
                         optimize=t,
-                        batch_size=128,
                         patience=10
                       )
 
