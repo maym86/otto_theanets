@@ -1,8 +1,10 @@
 import climate
 import theanets
 from sklearn import cross_validation
+from sklearn.utils import compute_class_weight
 import pandas as pd
-import numpy as np
+from sklearn.metrics import classification_report, confusion_matrix
+
 from sklearn import preprocessing
 from ml_metrics import *
 import math
@@ -55,11 +57,11 @@ def load_training_data():
 
     #split train/validate
     feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features, classes,
-                                                                                       test_size=0.2,
+                                                                                       test_size=0.3,
                                                                                        random_state=1232)
 
     feat_train, feat_val, class_train, class_val = cross_validation.train_test_split(feat_train, class_train,
-                                                                                     test_size=0.2,
+                                                                                     test_size=0.3,
                                                                                      random_state=1232)
 
 
@@ -70,9 +72,9 @@ def load_training_data():
     feat_test = std_scale.transform(feat_test)
 
     #class weights
-    weights = np.bincount(class_train) / float(len(class_train))
+    weights = compute_class_weight('auto', np.unique(classes), class_train)
     weights = weights.astype('float32')
-
+    print weights
     train_weights = []
     val_weights = []
     for i in class_train:
@@ -93,37 +95,41 @@ def main():
     training_data, validation_data, test_data, std_scale = load_training_data()
     climate.enable_default_logging()
 
-    t = 'nag' #, 'rmsprop','pretrain', 'rprop', 'sgd',  'adadelta', 'esgd', 'hf', 'sample', 'layerwise'
-    l = (93, 512, 9)
+    targets = ['nag','hf'] #,'nag','rmsprop','rprop','sgd','adadelta','esgd','hf','sample','layerwise']
+    layers = [(93,  dict(size=512, sparsity=0.5, activation='relu'),
+                    dict(size=512, sparsity=0.5, activation='relu'),
+                    dict(size=512, sparsity=0.5, activation='relu'),
+                    9)]
+
+    for l in layers:
+        for t in targets:
+            exp = theanets.Experiment(
+                theanets.Classifier,
+                layers=l,
+                weighted=True,
+                output_activation='softmax'
+            )
+
+            exp.train(training_data,
+                        validation_data,
+                        optimize=t,
+                        batch_size=128,
+                      )
+
+            #get an prediction of the accuracy from the test_data
+            test_results = exp.network.predict(test_data[0])
+            loss = multiclass_log_loss(test_data[1], test_results)
+
+            print 'Test multiclass log loss:', loss
+
+            out_file = 'results/' + str(loss) + t
+            exp.save(out_file + '.pkl')
 
 
-    exp = theanets.Experiment(
-        theanets.Classifier,
-        layers=l,
-        weighted=True,
-    )
-
-    exp.train(training_data,
-              validation_data,
-              algorithm=t,
-              patience= 50,
-              )
-
-
-    #get an prediction of the accuracy from the test_data
-    test_results = exp.network.predict(test_data[0])
-    loss = multiclass_log_loss(test_data[1], test_results)
-
-    print 'Test multiclass log loss:', loss
-
-    out_file = 'results/' + str(loss) + t + str(l)
-    exp.save(out_file + '.pkl')
-
-
-    #save the kaggle results
-    kaggle_test_features = load_test_data(std_scale)
-    results = exp.network.predict(kaggle_test_features)
-    save_results(out_file + '.csv', kaggle_test_features, results)
+            #save the kaggle results
+            kaggle_test_features = load_test_data(std_scale)
+            results = exp.network.predict(kaggle_test_features)
+            save_results(out_file + '.csv', kaggle_test_features, results)
 
 
 if __name__ == "__main__":
