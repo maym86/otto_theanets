@@ -95,7 +95,7 @@ def main():
     training_data, validation_data, test_data, std_scale = load_training_data()
     climate.enable_default_logging()
 
-    targets = ['nag','hf'] #,'nag','rmsprop','rprop','sgd','adadelta','esgd','hf','sample','layerwise']
+    targets = ['nag','hf','adadelta','esgd','layerwise','rmsprop','rprop','sgd','sample']
     layers = [(93,  dict(size=512, sparsity=0.5, activation='relu'),
                     dict(size=512, sparsity=0.5, activation='relu'),
                     dict(size=512, sparsity=0.5, activation='relu'),
@@ -106,14 +106,15 @@ def main():
             exp = theanets.Experiment(
                 theanets.Classifier,
                 layers=l,
-                weighted=True,
-                output_activation='softmax'
+                weighted=True
             )
 
             exp.train(training_data,
                         validation_data,
+                        output_activation = 'softmax',
                         optimize=t,
                         batch_size=128,
+                        patience=10
                       )
 
             #get an prediction of the accuracy from the test_data
