@@ -115,7 +115,6 @@ def main():
                         validation_data,
                         output_activation = 'softmax',
                         optimize=t,
-                        patience=10,
                         learning_rate = 0.01
 
                       )
@@ -124,7 +123,6 @@ def main():
                         validation_data,
                         output_activation = 'softmax',
                         optimize=t,
-                        patience=10,
                         learning_rate = 0.001
 
                       )
@@ -132,7 +130,6 @@ def main():
                         validation_data,
                         output_activation = 'softmax',
                         optimize=t,
-                        patience=10,
                         learning_rate = 0.0001
 
                       )
