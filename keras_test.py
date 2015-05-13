@@ -19,7 +19,7 @@ def load_test_data(std_scale):
     raw_testing_data = raw_testing_data.astype('float32')  # convert types to float32
 
     # Get the features and the classes
-    test_features = np.log(raw_testing_data.iloc[:, 1:94] + 1).values  # apply log functio
+    test_features = raw_testing_data.iloc[:, 1:94].values #np.log(raw_testing_data.iloc[:, 1:94] + 1).values  # apply log functio
 
     test_features = std_scale.transform(test_features)  # scale the features
     return test_features
@@ -58,7 +58,7 @@ def load_training_data():
     raw_training_data['target'] = raw_training_data['target'].astype('int32')
 
     # Get the features and the classes
-    features = np.log(raw_training_data.iloc[:, 1:94] + 1).values  # apply log function
+    features = raw_training_data.iloc[:, 1:94].values #np.log(raw_training_data.iloc[:, 1:94] + 1).values  # apply log function
     classes = raw_training_data['target'].values
 
     print np.unique(classes)
@@ -128,7 +128,7 @@ def main():
     training_data, validation_data, test_data, std_scale = load_training_data()
 
     layers = [(93, 512, 512, 512), (93, 512, 256, 128), (93, 256, 256, 256)]
-    optimizers = ['adam', 'adagrad', 'adadelta', 'rmsprop', 'sgd']
+    optimizers = ['adagrad', 'adam','adadelta', 'rmsprop', 'sgd']
     for l in layers:
         for o in optimizers:
             model = Sequential()
