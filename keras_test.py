@@ -4,7 +4,7 @@ import pickle as pkl
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
 from keras.layers.normalization import BatchNormalization
-from keras.layers.advanced_activations import PReLU
+from keras.layers.advanced_activations import PReLU, LeakyReLU
 import sys
 from sklearn import cross_validation
 import pandas as pd
@@ -65,12 +65,12 @@ def load_training_data():
     # split train/validate
     feat_train, feat_test, class_train, class_test = cross_validation.train_test_split(features,
                                                                                        class_list_to_matrix(classes),
-                                                                                       test_size=0.2,
+                                                                                       test_size=0.15,
                                                                                        random_state=1232)
 
     feat_train, feat_val, class_train, class_val = cross_validation.train_test_split(feat_train,
                                                                                      class_train,
-                                                                                     test_size=0.2,
+                                                                                     test_size=0.15,
                                                                                      random_state=1232)
 
     # scale the features
@@ -127,8 +127,8 @@ def main():
     sys.setrecursionlimit(40000)
     training_data, validation_data, test_data, std_scale = load_training_data()
 
-    layers = [(93, 512, 512, 512), (93, 512, 256, 128), (93, 256, 256, 256)]
-    optimizers = ['adagrad', 'adam','adadelta', 'rmsprop', 'sgd']
+    layers = [(93, 512, 512, 512)]
+    optimizers = ['adam', 'adagrad', 'adadelta', 'rmsprop', 'sgd']
     for l in layers:
         for o in optimizers:
 
@@ -150,7 +150,7 @@ def main():
 
             batch_size = 128
             model = trainer(model, training_data, validation_data, batch_size=batch_size,
-                            min_improvement=0.005, patience=4, epochs_before_eval=5)
+                            min_improvement=0.005, patience=10, epochs_before_eval=1)
 
             loss = model.evaluate(test_data[0], test_data[1], batch_size=batch_size)
             print 'Test multiclass log loss:', loss
