@@ -95,7 +95,7 @@ def main():
     training_data, validation_data, test_data, std_scale = load_training_data()
     climate.enable_default_logging()
 
-    targets = ['nag'] #,'hf','adadelta','esgd','layerwise','rmsprop','rprop','sgd','sample']
+    targets = ['nag','hf','adadelta','esgd','layerwise','rmsprop','rprop','sgd','sample']
     layers = [(93,  dict(size=512, activation='relu'),
                     dict(size=512, activation='relu'),
                     dict(size=512, activation='relu'),
@@ -108,7 +108,6 @@ def main():
                 layers=l,
                 weighted=True,
             )
-
 
 
             exp.train(training_data,
@@ -140,7 +139,7 @@ def main():
 
             print 'Test multiclass log loss:', loss
 
-            out_file = 'results/' + str(loss) + t
+            out_file = 'res/' + str(loss) + t
             exp.save(out_file + '.pkl')
 
 
