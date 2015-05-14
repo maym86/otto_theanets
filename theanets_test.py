@@ -39,6 +39,7 @@ def class_to_int(class_string):
     return int(class_string[6]) - 1
 
 
+
 def load_training_data():
     raw_training_data = pd.read_csv('train.csv')
 
@@ -95,10 +96,10 @@ def main():
     training_data, validation_data, test_data, std_scale = load_training_data()
     climate.enable_default_logging()
 
-    targets = ['nag','hf','adadelta','esgd','layerwise','rmsprop','rprop','sgd','sample']
-    layers = [(93,  dict(size=512, activation='relu'),
-                    dict(size=512, activation='relu'),
-                    dict(size=512, activation='relu'),
+    targets = ['esgd','layerwise','rmsprop','nag','rprop','sgd','sample','adadelta']
+    layers = [(93,  dict(size=512, sparsity=0.2, activation='relu'),
+                    dict(size=512, sparsity=0.2, activation='relu'),
+                    dict(size=512, sparsity=0.2, activation='relu'),
                     9)]
 
     for l in layers:
@@ -107,29 +108,22 @@ def main():
                 theanets.Classifier,
                 layers=l,
                 weighted=True,
+                output_activation='softmax'
             )
 
-
             exp.train(training_data,
                         validation_data,
-                        output_activation = 'softmax',
                         optimize=t,
-                        learning_rate = 0.01
-
                       )
 
             exp.train(training_data,
                         validation_data,
-                        output_activation = 'softmax',
                         optimize=t,
-                        learning_rate = 0.001
 
                       )
             exp.train(training_data,
                         validation_data,
-                        output_activation = 'softmax',
                         optimize=t,
-                        learning_rate = 0.0001
 
                       )
 
@@ -139,7 +133,7 @@ def main():
 
             print 'Test multiclass log loss:', loss
 
-            out_file = 'res/' + str(loss) + t
+            out_file = 'results/' + str(loss) + t
             exp.save(out_file + '.pkl')
 
 
